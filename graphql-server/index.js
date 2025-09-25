@@ -8,12 +8,13 @@ import {
   GraphQLString,
 } from "graphql";
 
+import cors from "cors";
 import { createHandler } from "graphql-http/lib/use/express";
 import express from "express";
 import { ruruHTML } from "ruru/server";
 
 // In-memory Todo storage
-let todos: { id: string; title: string; completed: boolean }[] = [];
+let todos= [];
 let idCounter = 1;
 
 // Define Todo type
@@ -87,6 +88,7 @@ const schema = new GraphQLSchema({
 
 // Express App
 const app = express();
+app.use(cors());
 
 // GraphiQL Playground
 app.get("/", (_req, res) => {

@@ -1,72 +1,129 @@
-import "./App.css";
+import type {
+    AddTodoData,
+    AddTodoVars,
+    DeleteTodoData,
+    DeleteTodoVars,
+    GetTodosData,
+    Todo,
+    ToggleTodoData,
+    ToggleTodoVars,
+} from "./types";
+import { useMutation, useQuery } from "@apollo/client/react";
 
 import { gql } from "@apollo/client";
-import reactLogo from "./assets/react.svg";
-import { useQuery } from "@apollo/client/react";
-import viteLogo from "/vite.svg";
+import { useState } from "react";
 
-type Location = {
-    id: string;
-    name: string;
-    description: string;
-    photo: string;
-};
-
-type GetLocationsData = {
-    locations: Location[];
-};
-
-const GET_LOCATIONS = gql`
-    query GetLocations {
-        locations {
+const GET_TODOS = gql`
+    query GetTodos {
+        todos {
             id
-            name
-            description
-            photo
+            title
+            completed
         }
     }
 `;
-function App() {
-    const { loading, error, data } = useQuery<GetLocationsData>(GET_LOCATIONS);
+
+const ADD_TODO = gql`
+    mutation AddTodo($title: String!) {
+        addTodo(title: $title) {
+            id
+            title
+            completed
+        }
+    }
+`;
+
+const TOGGLE_TODO = gql`
+    mutation ToggleTodo($id: ID!) {
+        toggleTodo(id: $id) {
+            id
+            title
+            completed
+        }
+    }
+`;
+
+const DELETE_TODO = gql`
+    mutation DeleteTodo($id: ID!) {
+        deleteTodo(id: $id)
+    }
+`;
+
+export default function App() {
+    // ✅ Typed useQuery
+    const { loading, error, data } = useQuery<GetTodosData>(GET_TODOS);
+
+    // ✅ Typed useMutation
+    const [addTodo] = useMutation<AddTodoData, AddTodoVars>(ADD_TODO, {
+        refetchQueries: [{ query: GET_TODOS }],
+    });
+
+    const [toggleTodo] = useMutation<ToggleTodoData, ToggleTodoVars>(
+        TOGGLE_TODO,
+        {
+            refetchQueries: [{ query: GET_TODOS }],
+        }
+    );
+
+    const [deleteTodo] = useMutation<DeleteTodoData, DeleteTodoVars>(
+        DELETE_TODO,
+        {
+            refetchQueries: [{ query: GET_TODOS }],
+        }
+    );
+
+    const [title, setTitle] = useState("");
 
     if (loading) return <p>Loading...</p>;
-    if (error) return <p>Error : {error.message}</p>;
+    if (error) return <p>Error: {error.message}</p>;
 
     return (
-        <>
-            <div>
-                <a href="https://vite.dev" target="_blank">
-                    <img src={viteLogo} className="logo" alt="Vite logo" />
-                </a>
-                <a href="https://react.dev" target="_blank">
-                    <img
-                        src={reactLogo}
-                        className="logo react"
-                        alt="React logo"
-                    />
-                </a>
-            </div>
-            <h1>Graphql Tutorial</h1>
-            <div className="card">
-                {data &&
-                    data.locations.map(({ id, name, description, photo }) => (
-                        <div key={id}>
-                            <h3>{name}</h3>
-                            <img
-                                width="400"
-                                height="250"
-                                alt="location-reference"
-                                src={`${photo}`}
-                            />
-                            <br />
-                            <b>About this location:</b>
-                            <p>{description}</p>
-                            <br />
-                        </div>
-                    ))}
-            </div>
-        </>
+        <div style={{ padding: "20px" }}>
+            <h1>🚀 GraphQL Todo App (TypeScript)</h1>
+
+            <form
+                onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!title.trim()) return;
+                    addTodo({ variables: { title } });
+                    setTitle("");
+                }}
+            >
+                <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Enter todo"
+                />
+                <button type="submit">Add</button>
+            </form>
+
+            <ul>
+                {data?.todos.map((todo: Todo) => (
+                    <li key={todo.id} style={{ margin: "10px 0" }}>
+                        <span
+                            style={{
+                                textDecoration: todo.completed
+                                    ? "line-through"
+                                    : "none",
+                                cursor: "pointer",
+                            }}
+                            onClick={() =>
+                                toggleTodo({ variables: { id: todo.id } })
+                            }
+                        >
+                            {todo.title}
+                        </span>
+                        <button
+                            style={{ marginLeft: "10px", color: "red" }}
+                            onClick={() =>
+                                deleteTodo({ variables: { id: todo.id } })
+                            }
+                        >
+                            ❌
+                        </button>
+                    </li>
+                ))}
+            </ul>
+        </div>
     );
 }
-
-export default App;
